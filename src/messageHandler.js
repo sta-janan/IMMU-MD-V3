@@ -105,7 +105,7 @@ function attachMessageHandler(socket, number) {
                     const isAdmin = meta.participants.find(p => p.id === participant)?.admin;
                     if (!isAdmin) {
                         await socket.sendMessage(jid, { delete: msg.key });
-                        await socket.sendMessage(jid, { text: `⚠️ @${participant.split('@')[0]} links aren't allowed here.`, mentions: [participant] });
+                        await sendStyled(socket, jid, { text: `⚠️ @${participant.split('@')[0]} links aren't allowed here.`, mentions: [participant] }, { botName: settings.botName || config.BOT_NAME });
                     }
                 } catch (e) { console.error('[antilink] failed:', e.message); }
             }
@@ -139,7 +139,7 @@ function attachMessageHandler(socket, number) {
             await command.execute(ctx);
         } catch (e) {
             console.error(`[command:${command.name}] error:`, e.message);
-            await socket.sendMessage(jid, { text: `❌ Something went wrong running that command.` }).catch(() => {});
+            await sendStyled(socket, jid, { text: `❌ Something went wrong running that command.` }, { botName: settings.botName || config.BOT_NAME }).catch(() => {});
         }
     });
 }
