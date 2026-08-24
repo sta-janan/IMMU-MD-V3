@@ -10,37 +10,46 @@ function sessionDir(number) {
     return path.join(config.SESSION_BASE_PATH, number);
 }
 
-// WhatsApp's Signal Protocol needs the FULL session folder (identity +
-// pre-keys + sender-keys + per-chat session state), not just creds.json.
-// Backing up only creds.json caused "Bad MAC" decrypt failures after every
-// restart (Heroku wipes local disk on restart), which pegged the CPU in an
-// infinite retry loop and made every response slow.
+const backupInProgress = new Set(); // number -> prevents overlapping backups (was causing GitHub SHA conflicts)
+
 async function saveSessionToGitHub(number) {
+    if (backupInProgress.has(number)) return; // a backup is already running for this number, skip
+    backupInProgress.add(number);
     try {
         const dir = sessionDir(number);
         if (!fs.existsSync(dir)) return;
         const files = fs.readdirSync(dir).filter(f => f.endsWith('.json'));
 
         for (const file of files) {
-            const filePath = path.join(dir, file);
-            const content = fs.readFileSync(filePath, 'utf8');
-            const remotePath = `sessions/${number}/${file}`;
-
-            let sha;
             try {
-                const { data } = await octokit.repos.getContent({ owner, repo, path: remotePath });
-                sha = data.sha;
-            } catch (e) { /* file doesn't exist yet */ }
+                const filePath = path.join(dir, file);
+                // Baileys actively deletes pre-key files once they're used —
+                // the file can vanish between readdir() and readFile() here.
+                // Skip that one file instead of aborting the whole backup.
+                if (!fs.existsSync(filePath)) continue;
+                const content = fs.readFileSync(filePath, 'utf8');
+                const remotePath = `sessions/${number}/${file}`;
 
-            await octokit.repos.createOrUpdateFileContents({
-                owner, repo, path: remotePath,
-                message: `session backup: ${number}/${file}`,
-                content: Buffer.from(content).toString('base64'),
-                ...(sha ? { sha } : {})
-            });
+                let sha;
+                try {
+                    const { data } = await octokit.repos.getContent({ owner, repo, path: remotePath });
+                    sha = data.sha;
+                } catch (e) { /* file doesn't exist on GitHub yet */ }
+
+                await octokit.repos.createOrUpdateFileContents({
+                    owner, repo, path: remotePath,
+                    message: `session backup: ${number}/${file}`,
+                    content: Buffer.from(content).toString('base64'),
+                    ...(sha ? { sha } : {})
+                });
+            } catch (fileErr) {
+                console.error(`[session] backup skipped for ${number}/${file}:`, fileErr.message);
+            }
         }
     } catch (e) {
         console.error(`[session] backup failed for ${number}:`, e.message);
+    } finally {
+        backupInProgress.delete(number);
     }
 }
 

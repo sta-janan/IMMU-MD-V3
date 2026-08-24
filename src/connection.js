@@ -17,6 +17,7 @@ const sessions = new Map(); // number -> { socket, startedAt }
 
 async function startSession(number, { onPairingCode } = {}) {
     const clean = number.replace(/[^0-9]/g, '');
+    const fs = require('fs-extra');
 
     // Never allow two live sockets for the same number — this was the
     // exact cause of repeated "conflict" disconnects in earlier builds.
@@ -27,14 +28,23 @@ async function startSession(number, { onPairingCode } = {}) {
         await delay(800);
     }
 
+    // Starting a NEW pairing (onPairingCode given) must begin from a
+    // completely clean folder. Leftover per-chat session/pre-key files
+    // from an earlier, possibly-broken pairing attempt were mixing with
+    // the new identity after a fresh pair, causing the Signal Protocol's
+    // "Bad MAC" decrypt failures on almost every incoming message.
+    if (onPairingCode) {
+        await fs.remove(sessionDir(clean));
+    }
+
     // Only pull the session from GitHub if we don't already have local
-    // creds — restoring on every reconnect was overwriting a freshly-paired
-    // local session with a stale GitHub backup (which, thanks to the backup
-    // debounce, often didn't even contain the pairing that just happened),
-    // causing the account to get logged straight back out.
-    const fs = require('fs-extra');
+    // creds AND we're not starting a brand new pairing — restoring on
+    // every reconnect was overwriting a freshly-paired local session with
+    // a stale GitHub backup, causing the account to get logged straight
+    // back out. A new pairing should also never restore old GitHub data —
+    // it needs a genuinely fresh identity.
     const localCredsPath = path.join(sessionDir(clean), 'creds.json');
-    if (!fs.existsSync(localCredsPath)) {
+    if (!onPairingCode && !fs.existsSync(localCredsPath)) {
         await restoreCredsFromGitHub(clean);
     }
     const { state, saveCreds } = await useMultiFileAuthState(sessionDir(clean));
