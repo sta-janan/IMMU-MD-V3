@@ -27,7 +27,16 @@ async function startSession(number, { onPairingCode } = {}) {
         await delay(800);
     }
 
-    await restoreCredsFromGitHub(clean);
+    // Only pull the session from GitHub if we don't already have local
+    // creds — restoring on every reconnect was overwriting a freshly-paired
+    // local session with a stale GitHub backup (which, thanks to the backup
+    // debounce, often didn't even contain the pairing that just happened),
+    // causing the account to get logged straight back out.
+    const fs = require('fs-extra');
+    const localCredsPath = path.join(sessionDir(clean), 'creds.json');
+    if (!fs.existsSync(localCredsPath)) {
+        await restoreCredsFromGitHub(clean);
+    }
     const { state, saveCreds } = await useMultiFileAuthState(sessionDir(clean));
 
     const socket = makeWASocket({
