@@ -1,26 +1,29 @@
 const config = require('../config');
 
-// Makes a message appear as if forwarded from a verified WhatsApp Channel —
-// gives it that "WhatsApp Business ✓ • Status" styled header.
-function verifiedContext(name) {
+// A fake "quoted message" whose remoteJid is status@broadcast (renders as
+// "WhatsApp • Status" in the reply header) quoting a fake vCard contact
+// named "© <bot> VERIFIED ✅" (renders as "Contact: ... VERIFIED"). This is
+// what produces the verified-looking status/contact card on every reply.
+function verifiedCard(botName) {
     return {
-        forwardingScore: 999,
-        isForwarded: true,
-        forwardedNewsletterMessageInfo: {
-            newsletterJid: '120363341506278064@newsletter',
-            newsletterName: name || config.BOT_NAME,
-            serverMessageId: -1
+        key: {
+            fromMe: false,
+            participant: '0@s.whatsapp.net',
+            remoteJid: 'status@broadcast'
+        },
+        message: {
+            contactMessage: {
+                displayName: `© ${botName} ᴠᴇʀɪғɪᴇᴅ ✅`,
+                vcard: `BEGIN:VCARD\nVERSION:3.0\nFN:${botName}\nORG:${botName};\nEND:VCARD`
+            }
         }
     };
 }
 
-// Send any message content with the verified-channel styling applied.
+// Send any message content quoting the fake verified-status card.
 async function sendStyled(socket, jid, content, options = {}) {
     const botName = options.botName || config.BOT_NAME;
-    return socket.sendMessage(jid, {
-        ...content,
-        contextInfo: { ...verifiedContext(botName), ...(content.contextInfo || {}) }
-    }, options.messageOptions || {});
+    return socket.sendMessage(jid, content, { quoted: verifiedCard(botName), ...(options.messageOptions || {}) });
 }
 
 // Box-drawing card, used by menu/alive/info style commands.
@@ -31,4 +34,4 @@ function box(title, lines) {
     return out;
 }
 
-module.exports = { verifiedContext, sendStyled, box };
+module.exports = { verifiedCard, sendStyled, box };
