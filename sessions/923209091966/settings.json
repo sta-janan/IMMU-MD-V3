@@ -1,0 +1,14 @@
+{
+  "prefix": null,
+  "botName": null,
+  "botPic": null,
+  "dmPresence": "online",
+  "gcPresence": null,
+  "antiDelete": "indm",
+  "antiViewOnce": "off",
+  "antiLink": false,
+  "autoStatusView": true,
+  "welcome": null,
+  "goodbye": null,
+  "mode": "public"
+}
