@@ -1,8 +1,10 @@
 const { jidNormalizedUser, downloadMediaMessage } = require('@whiskeysockets/baileys');
+const moment = require('moment-timezone');
 const config = require('../config');
 const settingsStore = require('./settings');
 const msgCache = require('./messageCache');
 const { resolve: resolveCommand } = require('./commandRouter');
+const { sendStyled, box } = require('./style');
 
 function extractText(message) {
     return message.conversation ||
@@ -44,12 +46,20 @@ function attachMessageHandler(socket, number) {
                 if (cached) {
                     const deleterNum = (msg.key.participant || jid).split('@')[0];
                     const target = settings.antiDelete === 'inchat' ? jid : selfJid;
+                    const botName = settings.botName || config.BOT_NAME;
                     if (target) {
                         try {
-                            await socket.sendMessage(target, {
-                                text: `🗑️ *Message deleted*\n👤 by @${deleterNum}\n\n> ${settings.botName || config.BOT_NAME}`,
-                                mentions: [`${deleterNum}@s.whatsapp.net`]
-                            });
+                            const isGrp = jid.endsWith('@g.us');
+                            let chatLine = '💬 ᴅᴍ';
+                            if (isGrp) {
+                                try { const meta = await socket.groupMetadata(jid); chatLine = `👥 ${meta.subject}`; } catch (e) {}
+                            }
+                            const alertText = box('ᴀɴᴛɪᴅᴇʟᴇᴛᴇ', [
+                                `🗑️ ᴅᴇʟᴇᴛᴇᴅ ʙʏ: @${deleterNum}`,
+                                chatLine,
+                                `🕒 ${moment().format('HH:mm:ss, DD MMM')}`
+                            ]);
+                            await sendStyled(socket, target, { text: alertText, mentions: [`${deleterNum}@s.whatsapp.net`] }, { botName });
                             await socket.sendMessage(target, { forward: cached.msg });
                         } catch (e) { console.error('[antidelete] forward failed:', e.message); }
                     }
@@ -68,12 +78,17 @@ function attachMessageHandler(socket, number) {
                     const buffer = await downloadMediaMessage({ key: msg.key, message: { [vo.type + 'Message']: vo.media } }, 'buffer', {});
                     const senderNum = (msg.key.participant || jid).split('@')[0];
                     const target = settings.antiViewOnce === 'inchat' ? jid : selfJid;
+                    const botName = settings.botName || config.BOT_NAME;
                     if (buffer && target) {
-                        const caption = `👁️ *View-once revealed*\n👤 from @${senderNum}`;
+                        const caption = box('ᴀɴᴛɪ-ᴠɪᴇᴡᴏɴᴄᴇ', [
+                            `👁️ ʀᴇᴠᴇᴀʟᴇᴅ ғʀᴏᴍ: @${senderNum}`,
+                            `🕒 ${moment().format('HH:mm:ss, DD MMM')}`
+                        ]);
                         if (vo.type === 'audio') {
                             await socket.sendMessage(target, { audio: buffer, mimetype: vo.media.mimetype || 'audio/ogg; codecs=opus' });
+                            await sendStyled(socket, target, { text: caption, mentions: [`${senderNum}@s.whatsapp.net`] }, { botName });
                         } else {
-                            await socket.sendMessage(target, { [vo.type]: buffer, caption, mentions: [`${senderNum}@s.whatsapp.net`] });
+                            await sendStyled(socket, target, { [vo.type]: buffer, caption, mentions: [`${senderNum}@s.whatsapp.net`] }, { botName });
                         }
                     }
                 } catch (e) { console.error('[antiviewonce] failed:', e.message); }
@@ -113,7 +128,10 @@ function attachMessageHandler(socket, number) {
         if (!command) return;
 
         const senderJid = msg.key.participant || jid;
-        const isOwner = selfJid && senderJid.split('@')[0] === selfJid.split('@')[0];
+        // fromMe is the only 100% reliable owner signal — comparing JIDs
+        // directly can fail because WhatsApp now uses two different
+        // identity spaces (@lid vs @s.whatsapp.net) that don't line up.
+        const isOwner = msg.key.fromMe === true;
 
         const ctx = { socket, msg, jid, args, text, number, settings, isGroup, isOwner, senderJid, prefix };
 
