@@ -10,7 +10,7 @@ const {
 
 const config = require('../config');
 const { sessionDir, saveCredsToGitHub, restoreCredsFromGitHub, deleteSessionFromGitHub } = require('./sessionManager');
-const { attachMessageHandler } = require('./messageHandler');
+const { attachMessageHandler, clearPresenceFor } = require('./messageHandler');
 const { attachStatusHandler } = require('./statusHandler');
 
 const sessions = new Map(); // number -> { socket, startedAt }
@@ -134,6 +134,7 @@ async function startSession(number, { onPairingCode } = {}) {
             if (statusCode === DisconnectReason.loggedOut) {
                 console.log(`[connection] ${clean} logged out — clearing session.`);
                 sessions.delete(clean);
+                clearPresenceFor(clean);
                 await deleteSessionFromGitHub(clean);
                 return;
             }
@@ -143,9 +144,11 @@ async function startSession(number, { onPairingCode } = {}) {
                 // that just fights the other socket in an endless loop.
                 console.log(`[connection] ${clean} replaced by another session — not reconnecting.`);
                 sessions.delete(clean);
+                clearPresenceFor(clean);
                 return;
             }
 
+            clearPresenceFor(clean);
             console.log(`[connection] ${clean} lost, reconnecting in 5s...`);
             sessions.delete(clean);
             await delay(5000);

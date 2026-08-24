@@ -15,7 +15,8 @@ const DEFAULTS = {
     antiLink: false,
     autoStatusView: true,
     welcome: null,
-    goodbye: null
+    goodbye: null,
+    mode: 'public' // public | private — private only responds to the owner
 };
 
 function settingsPath(number) {

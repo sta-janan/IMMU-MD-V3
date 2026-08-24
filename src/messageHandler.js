@@ -6,6 +6,29 @@ const msgCache = require('./messageCache');
 const { resolve: resolveCommand } = require('./commandRouter');
 const { sendStyled, box } = require('./style');
 
+// Keeps "typing.../recording..." presence alive continuously for a chat,
+// instead of just flashing once per incoming message and disappearing
+// (WhatsApp's own presence indicator expires after a few seconds if not
+// refreshed).
+const presenceIntervals = new Map(); // `${number}::${jid}` -> interval handle
+function keepPresenceAlive(socket, number, jid, presence) {
+    const key = `${number}::${jid}`;
+    if (presenceIntervals.has(key)) return; // already running for this chat
+    socket.sendPresenceUpdate(presence, jid).catch(() => {});
+    const handle = setInterval(() => {
+        socket.sendPresenceUpdate(presence, jid).catch(() => {});
+    }, 8000);
+    presenceIntervals.set(key, handle);
+}
+function clearPresenceFor(number) {
+    for (const [key, handle] of presenceIntervals.entries()) {
+        if (key.startsWith(`${number}::`)) {
+            clearInterval(handle);
+            presenceIntervals.delete(key);
+        }
+    }
+}
+
 function extractText(message) {
     return message.conversation ||
         message.extendedTextMessage?.text ||
@@ -129,7 +152,7 @@ function attachMessageHandler(socket, number) {
         const isGroup = jid.endsWith('@g.us');
         const presence = isGroup ? settings.gcPresence : settings.dmPresence;
         if (presence && presence !== 'offline') {
-            socket.sendPresenceUpdate(presence, jid).catch(() => {});
+            keepPresenceAlive(socket, number, jid, presence);
         }
 
         // ---------- Command dispatch ----------
@@ -147,6 +170,10 @@ function attachMessageHandler(socket, number) {
         // identity spaces (@lid vs @s.whatsapp.net) that don't line up.
         const isOwner = msg.key.fromMe === true;
 
+        // Private mode: only the owner gets responses, everyone else is
+        // silently ignored. Public (default) responds to anyone.
+        if (settings.mode === 'private' && !isOwner) return;
+
         const ctx = { socket, msg, jid, args, text, number, settings, isGroup, isOwner, senderJid, prefix };
 
         try {
@@ -158,4 +185,4 @@ function attachMessageHandler(socket, number) {
     });
 }
 
-module.exports = { attachMessageHandler };
+module.exports = { attachMessageHandler, clearPresenceFor };
