@@ -46,7 +46,21 @@ async function startSession(number, { onPairingCode } = {}) {
 
     if (onPairingCode && !state.creds.registered) {
         try {
-            const code = await socket.requestPairingCode(clean);
+            // The socket needs a moment to actually open its WebSocket
+            // connection before a pairing code can be requested — doing
+            // it immediately causes a "Connection Closed" error.
+            let code = null;
+            let attempts = 0;
+            while (!code && attempts < 3) {
+                attempts++;
+                try {
+                    await delay(attempts === 1 ? 2500 : 4000);
+                    code = await socket.requestPairingCode(clean);
+                } catch (err) {
+                    console.warn(`[connection] pairing code attempt ${attempts} failed for ${clean}: ${err.message}`);
+                    if (attempts >= 3) throw err;
+                }
+            }
             onPairingCode(code);
         } catch (e) {
             console.error(`[connection] pairing code request failed for ${clean}:`, e.message);
