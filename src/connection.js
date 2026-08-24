@@ -102,10 +102,31 @@ async function startSession(number, { onPairingCode } = {}) {
         }
     }
 
+    let connectedAnnounced = false;
     socket.ev.on('connection.update', async (update) => {
         const { connection, lastDisconnect } = update;
         if (connection === 'open') {
             console.log(`[connection] ${clean} connected.`);
+            if (!connectedAnnounced) {
+                connectedAnnounced = true;
+                try {
+                    const { jidNormalizedUser } = require('@whiskeysockets/baileys');
+                    const settingsStore = require('./settings');
+                    const { sendStyled, box } = require('./style');
+                    const cfg = require('../config');
+                    const selfJid = jidNormalizedUser(socket.user.id);
+                    const settings = settingsStore.get(clean);
+                    const botName = settings.botName || cfg.BOT_NAME;
+                    const text = box('ᴄᴏɴɴᴇᴄᴛᴇᴅ', [
+                        `✅ ${botName} ɪs ɴᴏᴡ ᴏɴʟɪɴᴇ`,
+                        `📱 ɴᴜᴍʙᴇʀ: ${clean}`,
+                        `🕒 ${new Date().toLocaleString()}`
+                    ]) + `\n\n> ${botName}`;
+                    await sendStyled(socket, selfJid, { text }, { botName });
+                } catch (e) {
+                    console.error(`[connection] failed to send connected message for ${clean}:`, e.message);
+                }
+            }
         }
         if (connection === 'close') {
             const statusCode = lastDisconnect?.error?.output?.statusCode;

@@ -8,6 +8,7 @@ module.exports = {
     SESSION_BASE_PATH: './session',
     DEFAULT_MENU_IMAGE: 'https://i.postimg.cc/50Zx7FbC/IMG-20260819-WA0015.jpg',
     PAIR_URL: process.env.PAIR_URL || 'https://immu-496eea16cfb1.herokuapp.com/',
+    NEWSLETTER_JID: '120363341506278064@newsletter',
     IMMU_MD_API: (process.env.SMD_SITE_URL || 'https://immu-md-api.vercel.app').replace(/\/+$/, ''),
     MAX_RECONNECT_RETRIES: 3
 };

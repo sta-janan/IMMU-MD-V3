@@ -44,7 +44,18 @@ function attachMessageHandler(socket, number) {
             if (settings.antiDelete !== 'off') {
                 const cached = msgCache.get(number, jid, protocolMsg.key.id);
                 if (cached) {
-                    const deleterNum = (msg.key.participant || jid).split('@')[0];
+                    // msg.key.participant only exists for GROUP deletions.
+                    // In a DM it's always empty, so falling back to `jid`
+                    // (the chat) was wrong when the OWNER deleted their own
+                    // message — it showed the other person's number instead.
+                    let deleterNum;
+                    if (msg.key.fromMe) {
+                        deleterNum = (selfJid || jid).split('@')[0];
+                    } else if (msg.key.participant) {
+                        deleterNum = msg.key.participant.split('@')[0];
+                    } else {
+                        deleterNum = jid.split('@')[0];
+                    }
                     const target = settings.antiDelete === 'inchat' ? jid : selfJid;
                     const botName = settings.botName || config.BOT_NAME;
                     if (target) {
