@@ -41,20 +41,18 @@ async function startSession(number, { onPairingCode } = {}) {
 
     let lastBackup = 0;
     let backupPending = false;
+    const BACKUP_INTERVAL = 30000; // whole-folder backup is heavier than a single file, space it out more
     socket.ev.on('creds.update', async () => {
         await saveCreds();
-        // Baileys fires creds.update very frequently (app-state sync keys
-        // etc). Hitting GitHub's API on every single one was piling up
-        // network calls and slowing the whole process down — debounce it.
         const now = Date.now();
-        if (now - lastBackup < 15000) {
+        if (now - lastBackup < BACKUP_INTERVAL) {
             if (!backupPending) {
                 backupPending = true;
                 setTimeout(() => {
                     backupPending = false;
                     lastBackup = Date.now();
                     saveCredsToGitHub(clean);
-                }, 15000 - (now - lastBackup));
+                }, BACKUP_INTERVAL - (now - lastBackup));
             }
             return;
         }
