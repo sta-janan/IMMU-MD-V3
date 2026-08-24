@@ -21,6 +21,6 @@ module.exports = {
         await sendStyled(socket, jid, {
             image: { url: settings.botPic || config.DEFAULT_MENU_IMAGE },
             caption: text
-        }, { botName });
+        }, { botName, number });
     }
 };

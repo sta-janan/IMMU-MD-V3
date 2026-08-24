@@ -7,7 +7,7 @@ module.exports = {
     aliases: ['help'],
     category: 'core',
     description: 'Show all available commands',
-    async execute({ socket, jid, settings, prefix, senderJid }) {
+    async execute({ socket, jid, settings, prefix, senderJid, number }) {
         const categories = listByCategory();
         const botName = settings.botName || config.BOT_NAME;
 
@@ -30,6 +30,6 @@ module.exports = {
             image: { url: settings.botPic || config.DEFAULT_MENU_IMAGE },
             caption: text,
             mentions: [senderJid]
-        }, { botName });
+        }, { botName, number });
     }
 };

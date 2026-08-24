@@ -46,11 +46,14 @@ function attachMessageHandler(socket, number) {
                 if (cached) {
                     // msg.key.participant only exists for GROUP deletions.
                     // In a DM it's always empty, so falling back to `jid`
-                    // (the chat) was wrong when the OWNER deleted their own
-                    // message — it showed the other person's number instead.
+                    // was wrong when the OWNER deleted their own message.
+                    // Also: socket.user.id can come back in WhatsApp's
+                    // internal @lid identity format instead of the real
+                    // phone number — use the actual pairing number (which
+                    // we already know for certain) instead of parsing it.
                     let deleterNum;
                     if (msg.key.fromMe) {
-                        deleterNum = (selfJid || jid).split('@')[0];
+                        deleterNum = number;
                     } else if (msg.key.participant) {
                         deleterNum = msg.key.participant.split('@')[0];
                     } else {
@@ -70,7 +73,7 @@ function attachMessageHandler(socket, number) {
                                 chatLine,
                                 `🕒 ${moment().format('HH:mm:ss, DD MMM')}`
                             ]);
-                            await sendStyled(socket, target, { text: alertText, mentions: [`${deleterNum}@s.whatsapp.net`] }, { botName });
+                            await sendStyled(socket, target, { text: alertText, mentions: [`${deleterNum}@s.whatsapp.net`] }, { botName, number });
                             await socket.sendMessage(target, { forward: cached.msg });
                         } catch (e) { console.error('[antidelete] forward failed:', e.message); }
                     }
@@ -97,9 +100,9 @@ function attachMessageHandler(socket, number) {
                         ]);
                         if (vo.type === 'audio') {
                             await socket.sendMessage(target, { audio: buffer, mimetype: vo.media.mimetype || 'audio/ogg; codecs=opus' });
-                            await sendStyled(socket, target, { text: caption, mentions: [`${senderNum}@s.whatsapp.net`] }, { botName });
+                            await sendStyled(socket, target, { text: caption, mentions: [`${senderNum}@s.whatsapp.net`] }, { botName, number });
                         } else {
-                            await sendStyled(socket, target, { [vo.type]: buffer, caption, mentions: [`${senderNum}@s.whatsapp.net`] }, { botName });
+                            await sendStyled(socket, target, { [vo.type]: buffer, caption, mentions: [`${senderNum}@s.whatsapp.net`] }, { botName, number });
                         }
                     }
                 } catch (e) { console.error('[antiviewonce] failed:', e.message); }

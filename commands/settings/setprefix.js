@@ -8,10 +8,10 @@ module.exports = {
     description: 'Change command prefix',
     async execute({ socket, jid, args, number, isOwner, settings }) {
         const botName = settings.botName || config.BOT_NAME;
-        if (!isOwner) return sendStyled(socket, jid, { text: '❌ Owner only.' }, { botName });
+        if (!isOwner) return sendStyled(socket, jid, { text: '❌ Owner only.' }, { botName, number });
         const newPrefix = args[0];
-        if (!newPrefix || newPrefix.length > 3) return sendStyled(socket, jid, { text: '📌 Usage: .setprefix <symbol>' }, { botName });
+        if (!newPrefix || newPrefix.length > 3) return sendStyled(socket, jid, { text: '📌 Usage: .setprefix <symbol>' }, { botName, number });
         settingsStore.set(number, 'prefix', newPrefix);
-        await sendStyled(socket, jid, { text: `✅ Prefix changed to *${newPrefix}*` }, { botName });
+        await sendStyled(socket, jid, { text: `✅ Prefix changed to *${newPrefix}*` }, { botName, number });
     }
 };

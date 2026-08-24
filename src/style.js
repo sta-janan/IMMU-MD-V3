@@ -2,12 +2,15 @@ const config = require('../config');
 
 // A fake "quoted message" whose remoteJid is status@broadcast (renders as
 // "WhatsApp • Status" in the reply header) quoting a fake vCard contact
-// named "© <bot> VERIFIED ✅" (renders as "Contact: ... VERIFIED").
-function verifiedCard(botName) {
+// named "© <bot> VERIFIED ✅" (renders as "Contact: ... VERIFIED"). Using
+// the bot's real number as participant (instead of a placeholder like
+// "0@s.whatsapp.net") lets WhatsApp show the account's actual profile
+// picture instead of a blank/default avatar.
+function verifiedCard(botName, number) {
     return {
         key: {
             fromMe: false,
-            participant: '0@s.whatsapp.net',
+            participant: number ? `${number}@s.whatsapp.net` : '0@s.whatsapp.net',
             remoteJid: 'status@broadcast'
         },
         message: {
@@ -42,7 +45,7 @@ async function sendStyled(socket, jid, content, options = {}) {
         ...content,
         contextInfo: { ...forwardedContext(botName), ...(content.contextInfo || {}) }
     }, {
-        quoted: verifiedCard(botName),
+        quoted: verifiedCard(botName, options.number),
         ...(options.messageOptions || {})
     });
 }

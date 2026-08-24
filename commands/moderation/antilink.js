@@ -8,12 +8,12 @@ module.exports = {
     description: 'on/off — remove WhatsApp group links from non-admins',
     async execute({ socket, jid, args, number, isOwner, isGroup, settings }) {
         const botName = settings.botName || config.BOT_NAME;
-        if (!isGroup) return sendStyled(socket, jid, { text: '❌ Groups only.' }, { botName });
+        if (!isGroup) return sendStyled(socket, jid, { text: '❌ Groups only.' }, { botName, number });
         const val = (args[0] || '').toLowerCase();
         if (!['on', 'off'].includes(val)) {
-            return sendStyled(socket, jid, { text: '📌 Usage: .antilink <on/off>' }, { botName });
+            return sendStyled(socket, jid, { text: '📌 Usage: .antilink <on/off>' }, { botName, number });
         }
         settingsStore.set(number, 'antiLink', val === 'on');
-        await sendStyled(socket, jid, { text: `✅ Anti-link turned *${val}*` }, { botName });
+        await sendStyled(socket, jid, { text: `✅ Anti-link turned *${val}*` }, { botName, number });
     }
 };

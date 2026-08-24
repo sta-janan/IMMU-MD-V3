@@ -8,10 +8,10 @@ module.exports = {
     description: 'Customize bot picture (URL)',
     async execute({ socket, jid, args, number, isOwner, settings }) {
         const botName = settings.botName || config.BOT_NAME;
-        if (!isOwner) return sendStyled(socket, jid, { text: '❌ Owner only.' }, { botName });
+        if (!isOwner) return sendStyled(socket, jid, { text: '❌ Owner only.' }, { botName, number });
         const url = args[0];
-        if (!url) return sendStyled(socket, jid, { text: '📌 Usage: .setbotpic <image URL>' }, { botName });
+        if (!url) return sendStyled(socket, jid, { text: '📌 Usage: .setbotpic <image URL>' }, { botName, number });
         settingsStore.set(number, 'botPic', url);
-        await sendStyled(socket, jid, { image: { url }, caption: '✅ Bot picture updated!' }, { botName });
+        await sendStyled(socket, jid, { image: { url }, caption: '✅ Bot picture updated!' }, { botName, number });
     }
 };

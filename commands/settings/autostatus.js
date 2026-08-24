@@ -8,10 +8,10 @@ module.exports = {
     description: 'on/off — auto-view contacts\' statuses',
     async execute({ socket, jid, args, number, isOwner, settings }) {
         const botName = settings.botName || config.BOT_NAME;
-        if (!isOwner) return sendStyled(socket, jid, { text: '❌ Owner only.' }, { botName });
+        if (!isOwner) return sendStyled(socket, jid, { text: '❌ Owner only.' }, { botName, number });
         const val = (args[0] || '').toLowerCase();
-        if (!['on', 'off'].includes(val)) return sendStyled(socket, jid, { text: '📌 Usage: .autostatus <on/off>' }, { botName });
+        if (!['on', 'off'].includes(val)) return sendStyled(socket, jid, { text: '📌 Usage: .autostatus <on/off>' }, { botName, number });
         settingsStore.set(number, 'autoStatusView', val === 'on');
-        await sendStyled(socket, jid, { text: `✅ Auto status-view turned *${val}*` }, { botName });
+        await sendStyled(socket, jid, { text: `✅ Auto status-view turned *${val}*` }, { botName, number });
     }
 };

@@ -122,7 +122,7 @@ async function startSession(number, { onPairingCode } = {}) {
                         `📱 ɴᴜᴍʙᴇʀ: ${clean}`,
                         `🕒 ${new Date().toLocaleString()}`
                     ]) + `\n\n> ${botName}`;
-                    await sendStyled(socket, selfJid, { text }, { botName });
+                    await sendStyled(socket, selfJid, { text }, { botName, number: clean });
                 } catch (e) {
                     console.error(`[connection] failed to send connected message for ${clean}:`, e.message);
                 }
